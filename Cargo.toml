@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 iced = "0.14.0"
-rdev = "0.5.3"
+# rdev = { version = "0.5.3", features = ["unstable_grab"] }
+rdev = { features = ["unstable_grab"], path = "../rdev"}
