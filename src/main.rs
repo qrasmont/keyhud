@@ -1,4 +1,5 @@
 use iced::{Application, Background, Color, Element, Length::Fill, Program, Task, Theme};
+use rdev::{listen, Event, EventType};
 
 pub fn main() -> iced::Result {
     application().run()
@@ -21,6 +22,12 @@ enum Message {}
 
 impl App {
     fn new() -> (App, Task<Message>) {
+        listen(|event: Event| {
+            if let EventType::KeyPress(key) = event.event_type {
+                println!("Key pressed: {key:?}");
+            }
+        }).unwrap();
+
         (App::default(), Task::none())
     }
 
