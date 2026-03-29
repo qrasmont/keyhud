@@ -3,7 +3,7 @@ use iced::{
     Length::Fill,
     Program, Subscription, Task, Theme,
     futures::{SinkExt, Stream, StreamExt, channel::mpsc},
-    stream,
+    stream, window,
 };
 use rdev::{Event, EventType, Key, grab};
 
@@ -19,6 +19,7 @@ fn application() -> Application<impl Program<Message = Message, Theme = Theme>> 
         .decorations(false)
         .theme(App::theme)
         .window_size((500.0, 500.0))
+        .level(window::Level::AlwaysOnTop)
 }
 
 #[derive(Default)]
