@@ -3,7 +3,8 @@ use iced::{
     Length::Fill,
     Program, Subscription, Task, Theme,
     futures::{SinkExt, Stream, StreamExt, channel::mpsc},
-    stream, window,
+    stream,
+    window::{Event as WEvent, Id, Level},
 };
 use rdev::{Event, EventType, Key, grab};
 
@@ -19,7 +20,7 @@ fn application() -> Application<impl Program<Message = Message, Theme = Theme>> 
         .decorations(false)
         .theme(App::theme)
         .window_size((500.0, 500.0))
-        .level(window::Level::AlwaysOnTop)
+        .level(Level::AlwaysOnTop)
 }
 
 #[derive(Default)]
@@ -31,6 +32,7 @@ struct App {
 enum Message {
     KeyPressed(Key),
     KeyReleased(Key),
+    WindowOpened(Id),
 }
 
 impl App {
@@ -42,7 +44,11 @@ impl App {
         match message {
             Message::KeyPressed(key) => state.keys.push(format!("p {key:?}")),
             Message::KeyReleased(key) => state.keys.push(format!("d {key:?}")),
+            Message::WindowOpened(id) => {
+                return iced::window::enable_mouse_passthrough(id);
+            }
         }
+
         Task::none()
     }
 
@@ -81,7 +87,14 @@ impl App {
     }
 
     fn subscription(_state: &App) -> Subscription<Message> {
-        Subscription::run(global_key_work)
+        let keys = Subscription::run(global_key_work);
+
+        let window_opened = iced::event::listen_with(|event, _, id| match event {
+            iced::Event::Window(WEvent::Opened { .. }) => Some(Message::WindowOpened(id)),
+            _ => None,
+        });
+
+        Subscription::batch([keys, window_opened])
     }
 }
 
