@@ -1,12 +1,16 @@
 use iced::{
-    Application, Background, Color, Element,
-    Length::Fill,
-    Program, Subscription, Task, Theme,
+    Application, Color, Element, Program, Subscription, Task, Theme,
     futures::{SinkExt, Stream, StreamExt, channel::mpsc},
     stream,
-    window::{Event as WEvent, Id, Level},
+    window::{Event as WEvent, Level, Position},
 };
-use rdev::{Event, EventType, Key, grab};
+use rdev::{Event, EventType, grab};
+
+mod keywidget;
+use keywidget::{BASE_KEY_SIZE, key_widget, keyboard_layout};
+
+mod app;
+use app::{App, Message};
 
 pub fn main() -> iced::Result {
     application().run()
@@ -19,20 +23,9 @@ fn application() -> Application<impl Program<Message = Message, Theme = Theme>> 
         .transparent(true)
         .decorations(false)
         .theme(App::theme)
-        .window_size((500.0, 500.0))
+        .window_size((680.0, 320.0))
         .level(Level::AlwaysOnTop)
-}
-
-#[derive(Default)]
-struct App {
-    keys: Vec<String>,
-}
-
-#[derive(Debug, Clone)]
-enum Message {
-    KeyPressed(Key),
-    KeyReleased(Key),
-    WindowOpened(Id),
+        .position(Position::Centered)
 }
 
 impl App {
@@ -42,8 +35,12 @@ impl App {
 
     fn update(state: &mut App, message: Message) -> Task<Message> {
         match message {
-            Message::KeyPressed(key) => state.keys.push(format!("p {key:?}")),
-            Message::KeyReleased(key) => state.keys.push(format!("d {key:?}")),
+            Message::KeyPressed(key) => {
+                state.pressed.insert(key);
+            }
+            Message::KeyReleased(key) => {
+                state.pressed.remove(&key);
+            }
             Message::WindowOpened(id) => {
                 return iced::window::enable_mouse_passthrough(id);
             }
@@ -53,23 +50,15 @@ impl App {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let entries = self
-            .keys
-            .iter()
-            .rev()
-            .map(|line| iced::widget::text(line).into())
-            .collect::<Vec<_>>();
+        let rows = keyboard_layout().into_iter().map(|row| {
+            let keys = row.into_iter().map(|slot| match slot {
+                Some((key, label, w)) => key_widget(label, w, self.pressed.contains(&key)),
+                None => iced::widget::Space::new().width(BASE_KEY_SIZE * 0.5).into(),
+            });
+            iced::widget::row(keys).spacing(4).into()
+        });
 
-        let content = iced::widget::scrollable(iced::widget::column(entries).spacing(4));
-
-        iced::widget::container(content)
-            .width(Fill)
-            .height(Fill)
-            .style(|_theme| iced::widget::container::Style {
-                background: Some(Background::Color(Color::TRANSPARENT)),
-                ..Default::default()
-            })
-            .into()
+        iced::widget::column(rows).spacing(4).padding(12).into()
     }
 
     fn theme(_state: &App) -> Theme {
